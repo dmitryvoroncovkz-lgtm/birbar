@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🍻 Бирбар</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f0f14;
+      --bg-card: #1a1a22;
+      --bg-input: #22222c;
+      --accent: #f5a623;
+      --accent-hover: #ffb84d;
+      --text: #eaeaf0;
+      --text-dim: #8a8a99;
+      --border: #2a2a35;
+      --shadow: 0 8px 24px rgba(0,0,0,0.35);
+      --radius: 14px;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: radial-gradient(ellipse at top, #1a1a28 0%, #0f0f14 60%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px 60px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .container { max-width: 560px; margin: 0 auto; }
+    .logo {
+      text-align: center;
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #f5a623, #ff6a3d);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -1px;
+    }
+    .tagline { text-align: center; color: var(--text-dim); font-size: 14px; margin-bottom: 28px; }
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+      animation: fadeIn 0.4s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .section-title {
+      font-size: 14px; font-weight: 600; color: var(--text-dim);
+      text-transform: uppercase; letter-spacing: 1.5px; margin: 24px 0 12px;
+    }
+    input {
+      width: 100%; padding: 14px 16px; margin: 6px 0;
+      border-radius: 10px; border: 1px solid var(--border);
+      background: var(--bg-input); color: var(--text);
+      font-size: 15px; font-family: inherit; transition: all 0.2s; outline: none;
+    }
+    input:focus { border-color: var(--accent); background: #26262f; box-shadow: 0 0 0 3px rgba(245, 166, 35, 0.15); }
+    input::placeholder { color: var(--text-dim); }
+    button {
+      width: 100%; padding: 14px 16px; margin: 6px 0;
+      border-radius: 10px; border: none;
+      background: var(--bg-input); color: var(--text);
+      font-size: 15px; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.2s;
+    }
+    button:hover { background: #2d2d38; transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    button.primary { background: linear-gradient(135deg, #f5a623, #ff8a3d); color: #1a1a1a; }
+    button.primary:hover { background: linear-gradient(135deg, #ffb84d, #ffa055); box-shadow: 0 6px 20px rgba(245, 166, 35, 0.35); }
+    button.ghost { background: transparent; border: 1px solid var(--border); }
+    button.ghost:hover { background: var(--bg-input); border-color: var(--accent); }
+    .profile { display: flex; align-items: center; gap: 14px; margin-bottom: 8px; }
+    .avatar {
+      width: 52px; height: 52px; border-radius: 50%;
+      background: linear-gradient(135deg, #f5a623, #ff6a3d);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 800; color: #1a1a1a; flex-shrink: 0;
+    }
+    .profile-info { flex: 1; }
+    .profile-name { font-size: 17px; font-weight: 700; }
+    .profile-code { font-size: 12px; color: var(--text-dim); font-family: monospace; margin-top: 2px; }
+    .profile-code b { color: var(--accent); letter-spacing: 2px; }
+    .feed-item {
+      display: flex; gap: 12px; padding: 14px;
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+    .feed-item .avatar { width: 42px; height: 42px; font-size: 18px; }
+    .feed-body { flex: 1; min-width: 0; }
+    .feed-user { font-weight: 700; font-size: 14px; }
+    .feed-drink { color: var(--accent); font-weight: 600; font-size: 15px; margin: 2px 0; }
+    .feed-time { font-size: 12px; color: var(--text-dim); }
+    .feed-photo { max-width: 100%; border-radius: 10px; margin: 8px 0; display: block; }
+    .stat-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px; background: var(--bg-input);
+      border-radius: 10px; margin-bottom: 6px;
+    }
+    .stat-rank { font-size: 18px; width: 32px; text-align: center; flex-shrink: 0; }
+    .stat-name { flex: 1; font-weight: 600; }
+    .stat-count {
+      background: linear-gradient(135deg, #f5a623, #ff8a3d);
+      color: #1a1a1a; font-weight: 800;
+      padding: 4px 12px; border-radius: 20px; font-size: 13px;
+      min-width: 40px; text-align: center;
+    }
+    #map { height: 360px; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    .leaflet-container { background: #111; }
+    .leaflet-popup-content-wrapper { background: #1a1a22; color: #eaeaf0; border-radius: 10px; }
+    .leaflet-popup-tip { background: #1a1a22; }
+    .leaflet-popup-content b { color: #f5a623; }
+    .leaflet-popup-content img { max-width: 180px; border-radius: 8px; margin: 6px 0; display: block; }
+    .hidden { display: none; }
+    .empty { text-align: center; color: var(--text-dim); padding: 20px; font-size: 14px; }
+    #toast {
+      position: fixed; bottom: 24px; left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: var(--bg-card); border: 1px solid var(--accent);
+      color: var(--text); padding: 12px 20px; border-radius: 12px;
+      font-size: 14px; font-weight: 600; box-shadow: var(--shadow);
+      transition: transform 0.3s ease; z-index: 9999;
+    }
+    #toast.show { transform: translateX(-50%) translateY(0); }
+    #photoLabel {
+      display: block; margin: 8px 0; padding: 14px;
+      border: 1px dashed var(--border); border-radius: 10px;
+      text-align: center; cursor: pointer; color: var(--text-dim);
+      font-size: 14px; transition: all 0.2s;
+    }
+    #photoLabel:hover { border-color: var(--accent); color: var(--accent); background: rgba(245,166,35,0.05); }
+    #photoPreview { display: none; margin: 10px 0; text-align: center; }
+    #previewImg { max-width: 100%; max-height: 240px; border-radius: 10px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">🍻 Бирбар</div>
+    <div class="tagline">Найди друзей за бокалом</div>
+
+    <div id="auth">
+      <div class="card">
+        <input id="username" placeholder="Логин" autocomplete="username">
+        <input id="password" type="password" placeholder="Пароль" autocomplete="current-password">
+        <button class="primary" onclick="register()">Создать аккаунт</button>
+        <button class="ghost" onclick="login()">Войти</button>
+      </div>
+    </div>
+
+    <div id="app" class="hidden">
+      <div class="card">
+        <div class="profile">
+          <div class="avatar" id="avatar">?</div>
+          <div class="profile-info">
+            <div class="profile-name" id="me">—</div>
+            <div class="profile-code">Код: <b id="myCode">—</b></div>
+          </div>
+          <button class="ghost" style="width: auto; padding: 8px 14px; margin: 0;" onclick="logout()">Выйти</button>
+        </div>
+      </div>
+
+      <div class="section-title">Добавить друга</div>
+      <div class="card">
+        <input id="friendCode" placeholder="Инвайт-код друга" style="text-transform: uppercase;">
+        <button class="primary" onclick="addFriend()">Добавить друга</button>
+      </div>
+
+      <div class="section-title">Я пью!</div>
+      <div class="card">
+        <input id="drink" placeholder="Что пьёшь? (пиво, вино, коктейль...)">
+        <label for="photo" id="photoLabel">📷 Добавить фото (необязательно)</label>
+        <input type="file" id="photo" accept="image/*" style="display: none;" onchange="onPhotoPick(event)">
+        <div id="photoPreview">
+          <img id="previewImg">
+          <button class="ghost" style="margin-top: 8px;" onclick="clearPhoto()">Убрать фото</button>
+        </div>
+        <button class="primary" onclick="checkin()">🍺 Отметиться</button>
+      </div>
+
+      <div class="section-title">Кто сейчас пьёт</div>
+      <div class="card">
+        <button class="ghost" onclick="loadFeed()">Обновить ленту</button>
+      </div>
+      <div id="feed"></div>
+
+      <div class="section-title">Карта</div>
+      <div id="map"></div>
+      <p class="empty" style="padding: 10px 0 0;">Чекины друзей за последние 24 часа</p>
+
+      <div class="section-title">Статистика друзей</div>
+      <div class="card">
+        <button class="ghost" onclick="loadStats()">Показать статистику</button>
+      </div>
+      <div id="stats"></div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+
+<script>
+  let token = localStorage.getItem('token');
+  let me = localStorage.getItem('me');
+  let map = null;
+  let markersLayer = null;
+
+  function toast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  function api(path, method = 'GET', body) {
+    return fetch('/api' + path, {
+      method,
+      headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: 'Bearer ' + token } : {}) },
+      body: body ? JSON.stringify(body) : undefined
+    }).then(r => r.json());
+  }
+
+  async function register() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    if (!username || !password) return toast('Заполни логин и пароль');
+    const r = await api('/register', 'POST', { username, password });
+    if (r.token) { save(r); toast('Добро пожаловать, ' + r.username + '!'); }
+    else toast(r.error);
+  }
+
+  async function login() {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    if (!username || !password) return toast('Заполни логин и пароль');
+    const r = await api('/login', 'POST', { username, password });
+    if (r.token) { save(r); toast('С возвращением, ' + r.username + '!'); }
+    else toast(r.error);
+  }
+
+  function save(r) {
+    token = r.token; me = r.username;
+    localStorage.setItem('token', token);
+    localStorage.setItem('me', me);
+    localStorage.setItem('myCode', r.inviteCode);
+    showApp();
+  }
+
+  function logout() { localStorage.clear(); location.reload(); }
+
+  function showApp() {
+    document.getElementById('auth').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    document.getElementById('me').textContent = me;
+    document.getElementById('avatar').textContent = me.charAt(0).toUpperCase();
+    document.getElementById('myCode').textContent = localStorage.getItem('myCode');
+    initMap();
+    loadFeed();
+    loadMap();
+  }
+
+  function initMap() {
+    if (map) return;
+    map = L.map('map').setView([55.7558, 37.6173], 4);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19, attribution: '© OpenStreetMap'
+    }).addTo(map);
+    markersLayer = L.layerGroup().addTo(map);
+    setTimeout(() => map.invalidateSize(), 100);
+  }
+
+  async function loadMap() {
+    if (!map) initMap();
+    const feed = await api('/feed');
+    markersLayer.clearLayers();
+    const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const points = feed.filter(f => f.lat && f.lng && new Date(f.created_at).getTime() > dayAgo);
+    points.forEach(f => {
+      const marker = L.marker([f.lat, f.lng]);
+      marker.bindPopup(`
+        <b>${f.username}</b><br>
+        🍺 ${f.drink}<br>
+        ${f.photo_url ? `<img src="${f.photo_url}">` : ''}
+        <small>${new Date(f.created_at).toLocaleString()}</small>
+      `, { maxWidth: 220 });
+      markersLayer.addLayer(marker);
+    });
+    if (points.length > 0) {
+      const bounds = points.map(p => [p.lat, p.lng]);
+      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    }
+  }
+
+  async function addFriend() {
+    const inviteCode = document.getElementById('friendCode').value.trim().toUpperCase();
+    if (!inviteCode) return toast('Введи инвайт-код');
+    const r = await api('/friends/add', 'POST', { inviteCode });
+    if (r.ok) { toast('Друг добавлен: ' + r.friend.username); document.getElementById('friendCode').value = ''; }
+    else toast(r.error);
+  }
+
+  function onPhotoPick(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      document.getElementById('previewImg').src = ev.target.result;
+      document.getElementById('photoPreview').style.display = 'block';
+      document.getElementById('photoLabel').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function clearPhoto() {
+    document.getElementById('photo').value = '';
+    document.getElementById('photoPreview').style.display = 'none';
+    document.getElementById('photoLabel').style.display = 'block';
+  }
+
+  async function checkin() {
+    const drink = document.getElementById('drink').value.trim();
+    if (!drink) return toast('Что пьёшь?');
+
+    const sendCheckin = async (lat, lng) => {
+      const formData = new FormData();
+      formData.append('drink', drink);
+      if (lat) formData.append('lat', lat);
+      if (lng) formData.append('lng', lng);
+      const photoInput = document.getElementById('photo');
+      if (photoInput.files[0]) formData.append('photo', photoInput.files[0]);
+
+      const res = await fetch('/api/checkin', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        body: formData
+      });
+      const r = await res.json();
+      if (r.ok) {
+        document.getElementById('drink').value = '';
+        clearPhoto();
+        toast('Отмечено! 🍻');
+        loadFeed();
+        loadMap();
+      } else toast(r.error || 'Ошибка');
+    };
+
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => sendCheckin(pos.coords.latitude, pos.coords.longitude),
+      () => sendCheckin()
+    );
+  }
+
+  async function loadFeed() {
+    const feed = await api('/feed');
+    const el = document.getElementById('feed');
+    if (!feed.length) {
+      el.innerHTML = '<div class="card"><div class="empty">Пока никто не пил. Будь первым! 🍺</div></div>';
+      return;
+    }
+    el.innerHTML = feed.map(f => `
+      <div class="feed-item">
+        <div class="avatar">${f.username.charAt(0).toUpperCase()}</div>
+        <div class="feed-body">
+          <div class="feed-user">${f.username}</div>
+          <div class="feed-drink">🍺 ${f.drink}</div>
+          ${f.photo_url ? `<img src="${f.photo_url}" class="feed-photo" onerror="this.style.display='none'">` : ''}
+          <div class="feed-time">${new Date(f.created_at).toLocaleString()}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  async function loadStats() {
+    const stats = await api('/stats');
+    const el = document.getElementById('stats');
+    const medals = ['🥇', '🥈', '🥉'];
+    el.innerHTML = stats.map((s, i) => `
+      <div class="stat-row">
+        <div class="stat-rank">${medals[i] || (i + 1)}</div>
+        <div class="stat-name">${s.username}</div>
+        <div class="stat-count">${s.total}</div>
+      </div>
+    `).join('');
+  }
+
+  if (token) showApp();
+</script>
+</body>
+</html>
